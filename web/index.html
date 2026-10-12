@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>iFeira</title>
+<meta name="description" content="Controle da geladeira e despensa: monte as prateleiras, adicione produtos à mão, por foto ou escaneando a nota, e arraste para o lugar.">
+<meta name="theme-color" content="#0e6964">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="iFeira">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: uma geladeira aberta (gabinete + porta) numa parede de azulejos; bancada e lista "usar logo" ao lado. */
+:root{
+  --wall:#e7edee; --wall-line:#d8e1e3;
+  --ink:#17262b; --ink-2:#4c5e65; --ink-3:#7a8b91;
+  --paper:#fbfdfd; --line:#d1dcde;
+  --enamel:#b7dcd2; --enamel-hi:#d3ebe5; --enamel-lo:#8dbdb1;
+  --liner:#eef6f4; --interior:#f8fcfc; --interior-lo:#e0ebed; --frost:#e2eff6;
+  --glass:rgba(118,168,178,.36); --glass-hi:rgba(255,255,255,.75);
+  --tape:#1f2428; --tape-ink:#f3f1ea;
+  --accent:#0e6964; --accent-hi:#12807a; --accent-ink:#ffffff; --accent-soft:#d5ebe8;
+  --ok:#2d8a57; --warn:#c47f0c; --bad:#c23b2b; --none:#a3b0b5;
+  --shadow:0 1px 2px rgba(20,40,45,.08),0 6px 18px rgba(20,40,45,.07);
+  --f-display:'Bricolage Grotesque',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --wall:#0f1517; --wall-line:#162125; --ink:#e3ecee; --ink-2:#a6b5ba; --ink-3:#71838a;
+  --paper:#1b2528; --line:#2b393d;
+  --enamel:#2b4642; --enamel-hi:#3a5a55; --enamel-lo:#1d3330; --liner:#21302e; --interior:#1c2629; --interior-lo:#131b1e; --frost:#192933;
+  --glass:rgba(140,190,200,.22); --glass-hi:rgba(255,255,255,.12);
+  --tape:#e9e6dc; --tape-ink:#1b1f22;
+  --accent:#4fbdb4; --accent-hi:#6fd0c7; --accent-ink:#06201e; --accent-soft:#163a3a;
+  --ok:#4cbf7f; --warn:#e3a33a; --bad:#ef6b5a; --none:#5f6f75;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+  color-scheme:dark }}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{
+  background-color:var(--wall); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.45;
+  background-image:linear-gradient(var(--wall-line) 1px,transparent 1px),linear-gradient(90deg,var(--wall-line) 1px,transparent 1px);
+  background-size:56px 56px; background-position:-1px -1px; min-height:100vh;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.app{max-width:1260px;margin:0 auto;padding-inline:16px;padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(48px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+
+/* Cabeçalho */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1;letter-spacing:-.02em;margin:0}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:6px 0 0;color:var(--ink-2);font-size:14px}
+.brand p::first-letter{text-transform:uppercase}
+.sync{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{display:flex;align-items:baseline;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--ink-2)}
+.stat b{font-family:var(--f-display);font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.stat .dot{width:8px;height:8px;border-radius:50%;align-self:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 13px;cursor:pointer;font-weight:700;font-size:14px;transition:background .15s,border-color .15s,transform .1s;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--ink-3)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:17px;height:17px;flex:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-hi);border-color:var(--accent-hi)}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.btn.ghost{background:transparent;border-color:transparent;padding-inline:8px}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:5px 10px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.search{position:relative;flex:1 1 180px;max-width:260px}
+.search input{width:100%;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 12px 8px 34px}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3)}
+
+.banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:1px dashed var(--accent);border-radius:12px;padding:10px 14px;font-size:14px}
+
+/* Grade principal */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-areas:"fridge counter" "fridge aside";grid-template-rows:auto 1fr;gap:20px 24px;align-items:start}
+.area-fridge{grid-area:fridge;min-width:0}
+.area-counter{grid-area:counter;min-width:0}
+.area-aside{grid-area:aside;min-width:0;display:flex;flex-direction:column;gap:18px}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"counter" "fridge" "aside"}}
+
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.panel h2{font-family:var(--f-display);font-size:19px;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.panel .sub{margin:2px 0 10px;color:var(--ink-2);font-size:13px}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+
+/* Geladeira */
+.fridge-wrap{position:relative;padding-bottom:14px}
+.fridge{position:relative;background:linear-gradient(160deg,var(--enamel-hi),var(--enamel) 40%,var(--enamel-lo));border-radius:30px 30px 22px 22px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.44fr);gap:12px;box-shadow:var(--shadow),inset 0 2px 0 var(--glass-hi)}
+.fridge-wrap::before,.fridge-wrap::after{content:"";position:absolute;bottom:2px;width:46px;height:14px;background:var(--enamel-lo);border-radius:0 0 8px 8px}
+.fridge-wrap::before{left:36px}.fridge-wrap::after{right:36px}
+@media (max-width:640px){.fridge{grid-template-columns:minmax(0,1fr);border-radius:24px}}
+.cabinet{display:flex;flex-direction:column;gap:12px;min-width:0}
+.comp{position:relative;background:radial-gradient(120% 60% at 50% 0%,var(--interior) 40%,var(--interior-lo));border-radius:16px;padding:30px 12px 12px;box-shadow:inset 0 3px 10px rgba(0,0,0,.08),inset 0 0 0 2px var(--enamel-lo);display:flex;flex-direction:column;gap:10px;min-width:0}
+.comp.freezer{background:linear-gradient(180deg,var(--frost),var(--interior-lo))}
+.comp-label{position:absolute;top:8px;left:14px;right:14px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.comp-label .temp{color:var(--accent)}
+.door{position:relative;background:linear-gradient(90deg,var(--enamel-lo),var(--enamel) 14px,var(--liner) 15px);border-radius:16px;padding:30px 12px 12px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 2px var(--enamel-lo);min-width:0}
+.door .comp-label{left:24px}
+.drawers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.empty-comp{color:var(--ink-3);font-size:13px;padding:8px 2px}
+
+.zone{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0}
+.zone.size-s .items{min-height:58px}
+.zone.size-m .items{min-height:92px}
+.zone.size-l .items{min-height:140px}
+.zone.k-shelf,.zone.k-freezer{padding-bottom:10px}
+.zone.k-shelf::after,.zone.k-freezer::after{content:"";position:absolute;left:-6px;right:-6px;bottom:0;height:7px;border-radius:3px;background:linear-gradient(180deg,var(--glass-hi),var(--glass));box-shadow:0 2px 4px rgba(0,0,0,.08)}
+.zone.k-drawer{background:linear-gradient(180deg,transparent 0 28px,var(--glass) 28px);border:1.5px solid var(--glass);border-radius:10px 10px 14px 14px;padding:6px 8px 10px}
+.zone.k-drawer::before{content:"";position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:40%;height:5px;border-radius:3px;background:var(--glass-hi)}
+.zone.k-door{padding-bottom:4px}
+.zone.k-door .items{border-bottom:13px solid var(--glass);border-radius:0 0 10px 10px;box-shadow:inset 0 -1px 0 var(--glass-hi);padding-bottom:4px}
+.zone.k-pantry{border-bottom:6px solid var(--line);padding-bottom:8px}
+.tape{align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--f-mono);font-weight:600;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;background:var(--tape);color:var(--tape-ink);padding:2px 8px;border-radius:2px;box-shadow:0 1px 0 rgba(0,0,0,.2);transform:rotate(-.6deg)}
+.items{display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;border-radius:8px;transition:background .15s;position:relative}
+.items:empty::before{content:"Solte os itens aqui";color:var(--ink-3);font-size:12px;padding:6px 2px;opacity:.8}
+.editing .zone{outline:1.5px dashed var(--accent);outline-offset:3px;border-radius:8px}
+
+/* Etiquetas de produto */
+.chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--none);border-radius:9px;padding:4px 8px 4px 6px;font-size:12.5px;line-height:1.2;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.06);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;transition:opacity .15s,transform .15s}
+.chip:hover{border-color:var(--ink-3)}
+.chip.s-ok{border-left-color:var(--ok)}.chip.s-warn{border-left-color:var(--warn)}.chip.s-bad{border-left-color:var(--bad)}
+.chip .ico{font-size:16px;line-height:1}
+.chip .ph{width:24px;height:24px;border-radius:6px;object-fit:cover;flex:none;margin-block:-2px;background:var(--interior-lo);-webkit-user-drag:none;pointer-events:none}
+.chip .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:15ch;min-width:0}
+.chip .q{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);white-space:nowrap}
+.chip .bb{font-family:var(--f-mono);font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:4px;white-space:nowrap;background:var(--interior-lo);color:var(--ink-2)}
+.chip.s-warn .bb{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.chip.s-bad .bb{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.chip.dim{opacity:.22}
+.chip.ghost{opacity:.35;border-style:dashed}
+.chip.chosen{box-shadow:0 8px 22px rgba(0,0,0,.18);transform:scale(1.04)}
+.chip.pulse{animation:pulse 1.4s ease 2}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 transparent}40%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 45%,transparent)}}
+
+/* Bancada */
+.counter{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+.counter h2{font-family:var(--f-display);font-size:19px;margin:0}
+.counter .sub{margin:2px 0 10px;color:var(--ink-2);font-size:13px}
+.counter .items{min-height:110px;padding:10px;background:repeating-linear-gradient(135deg,var(--interior) 0 10px,var(--interior-lo) 10px 11px);border:1px solid var(--line);border-radius:12px}
+.counter .items:empty::before{content:"Nada esperando. Adicione um produto ou escaneie uma nota, e ele aparece aqui."}
+.counter-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:10px}
+.bin{display:flex;align-items:center;gap:10px;border:1.5px dashed var(--line);border-radius:12px;padding:8px 12px;color:var(--ink-2);font-size:13px;min-height:52px;position:relative}
+.bin .items{flex:1;min-height:34px}
+.bin .items:empty::before{content:"Arraste aqui quando acabar"}
+.bin .items .chip{display:none}
+
+.soon{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.soon li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 4px;border-top:1px solid var(--line);cursor:pointer;border-radius:6px}
+.soon li:first-child{border-top:0}
+.soon li:hover{background:var(--accent-soft)}
+.soon li img{width:26px;height:26px;border-radius:6px;object-fit:cover}
+.soon .w{font-size:12px;color:var(--ink-3)}
+.soon .d{font-family:var(--f-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.soon .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:14px}
+.muted{color:var(--ink-3);font-size:13px;margin:0}
+
+/* Editor de layout e ajustes */
+.lay-sec{margin-top:12px}
+.lay-sec h3{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.lay-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding:4px 0}
+.lay-row input,.lay-row select{border:1px solid var(--line);background:var(--interior);border-radius:8px;padding:6px 8px;min-width:0;font-size:14px}
+.lay-row .mv{display:flex}
+.icon-btn{border:0;background:transparent;width:30px;height:30px;border-radius:7px;cursor:pointer;color:var(--ink-2);display:grid;place-items:center}
+.icon-btn:hover{background:var(--accent-soft);color:var(--ink)}
+.icon-btn svg{width:16px;height:16px}
+.set-sec{display:flex;flex-direction:column;gap:8px;padding-block:12px;border-top:1px solid var(--line)}
+.set-sec:first-child{border-top:0;padding-top:0}
+.set-sec h3{font-family:var(--f-display);font-size:17px;margin:0}
+.set-sec p{margin:0;color:var(--ink-2);font-size:14px;max-width:62ch}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--interior-lo);color:var(--ink-2)}
+.pill.on{background:var(--accent-soft);color:var(--accent)}
+
+/* Diálogos */
+dialog{border:1px solid var(--line);border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 40px);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+dialog.wide{width:min(820px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,20,24,.45)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100dvh - 42px)}
+.dlg-head{padding:16px 18px 6px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.dlg-head h2{font-family:var(--f-display);margin:0;font-size:22px;letter-spacing:-.01em}
+.dlg-body{padding:8px 18px 14px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.dlg-foot{padding:12px 18px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.dlg-foot .r{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fields .full{grid-column:1/-1}
+@media (max-width:480px){.fields{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12px;font-weight:700;color:var(--ink-2);letter-spacing:.02em}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--interior);border-radius:9px;padding:9px 10px;min-width:0;width:100%}
+.inline{display:flex;gap:6px}
+.inline > *{min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.preset{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.preset:hover{border-color:var(--accent);color:var(--ink)}
+
+/* Foto do produto */
+.photo-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.photo-box{position:relative;width:112px;height:112px;flex:none;border-radius:14px;border:1.5px dashed var(--line);background:var(--interior);display:grid;place-items:center;overflow:hidden;cursor:pointer;color:var(--ink-3);padding:0}
+.photo-box:hover{border-color:var(--accent);color:var(--accent)}
+.photo-box img{width:100%;height:100%;object-fit:cover}
+.photo-box svg{width:34px;height:34px}
+.photo-box .busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--paper) 70%,transparent)}
+.photo-actions{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 200px}
+.photo-actions .btns{display:flex;flex-wrap:wrap;gap:6px}
+.photo-actions .muted{font-size:12.5px}
+
+.tabs{display:flex;gap:4px;background:var(--interior-lo);padding:4px;border-radius:10px;align-self:flex-start}
+.tab{border:0;background:transparent;padding:6px 14px;border-radius:7px;cursor:pointer;font-weight:700;font-size:14px;color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;border:2px dashed var(--line);border-radius:14px;padding:22px 14px;cursor:pointer;color:var(--ink-2);background:var(--interior)}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--ink)}
+.drop svg{width:34px;height:34px;color:var(--accent)}
+.drop strong{color:var(--ink)}
+.preview{display:flex;gap:12px;align-items:center}
+.preview img{width:72px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.status{font-size:14px;color:var(--ink-2);display:flex;gap:10px;align-items:center}
+.status.err{color:var(--bad)}
+.spinner{width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rows{display:flex;flex-direction:column;gap:6px}
+.rrow{display:grid;grid-template-columns:24px minmax(0,2.4fr) 64px 84px minmax(0,1.2fr) 140px;gap:6px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--interior)}
+.rrow input,.rrow select{border:1px solid var(--line);background:var(--paper);border-radius:7px;padding:6px 7px;min-width:0;width:100%;font-size:13.5px}
+.rrow input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.rrow.off{opacity:.45}
+.rhead{display:grid;grid-template-columns:24px minmax(0,2.4fr) 64px 84px minmax(0,1.2fr) 140px;gap:6px;padding:0 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:700px){
+  .rhead{display:none}
+  .rrow{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr)}
+  .rrow .c-name{grid-column:2/-1}
+  .rrow .c-qty{grid-column:2}
+}
+.receipt-meta{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);letter-spacing:.04em}
+.hint{font-size:13px;color:var(--ink-3);margin:0}
+
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50;width:min(440px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--wall);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;animation:up .25s ease}
+.toast button{background:transparent;border:0;color:var(--accent-hi);font-weight:700;cursor:pointer;padding:2px 4px}
+@keyframes up{from{transform:translateY(10px);opacity:0}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <h1><span>i</span>Feira</h1>
+      <p><span id="today"></span> · <span class="sync" id="sync">Conectando…</span></p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btn-add" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar produto</button>
+    <button class="btn" id="btn-scan" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3" stroke-linecap="round"/></svg>Escanear nota</button>
+    <button class="btn" id="btn-layout" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M14 3v18" stroke-linecap="round"/></svg>Editar prateleiras</button>
+    <button class="btn" id="btn-settings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Ajustes</button>
+    <label class="search"><span class="sr">Buscar produto</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg>
+      <input id="q" type="search" placeholder="Buscar produto">
+    </label>
+  </div>
+
+  <div class="banner" id="examples" hidden>
+    <span>Estes são itens de exemplo para você ver como funciona. Arraste à vontade e depois limpe quando quiser começar.</span>
+    <button class="btn small" id="btn-clear-ex" type="button">Limpar exemplos</button>
+  </div>
+
+  <div class="grid">
+    <div class="area-fridge">
+      <div class="fridge-wrap"><div class="fridge" id="fridge"></div></div>
+    </div>
+    <div class="area-counter" id="counter-area"></div>
+    <aside class="area-aside">
+      <section class="panel">
+        <h2>Usar logo</h2>
+        <p class="sub">Vencidos ou vencendo nos próximos 5 dias</p>
+        <ul class="soon" id="soon"></ul>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h2>Despensa</h2><p class="sub">Armários e coisas que não precisam de frio</p></div></div>
+        <div id="pantry" style="display:flex;flex-direction:column;gap:12px"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- Diálogo de produto -->
+<dialog id="dlg-prod">
+  <form class="dlg" id="f-prod" method="dialog">
+    <div class="dlg-head"><h2 id="p-title">Adicionar produto</h2><button class="icon-btn" type="button" data-close aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="dlg-body">
+      <div class="photo-row">
+        <button class="photo-box" type="button" id="p-photo-box" aria-label="Tirar foto do produto">
+          <img id="p-photo" alt="Foto do produto" hidden>
+          <svg id="p-photo-empty" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span class="busy" id="p-photo-busy" hidden><span class="spinner"></span></span>
+        </button>
+        <div class="photo-actions">
+          <div class="btns">
+            <button class="btn small" type="button" id="p-cam">Tirar foto</button>
+            <button class="btn small" type="button" id="p-pick">Escolher imagem</button>
+            <button class="btn small ghost danger" type="button" id="p-photo-rm" hidden>Remover foto</button>
+          </div>
+          <button class="btn small" type="button" id="p-identify" hidden>✨ Preencher com a foto</button>
+          <p class="muted" id="p-photo-note">Uma foto ajuda a achar o produto na geladeira.</p>
+        </div>
+        <input id="p-file-cam" type="file" accept="image/*" capture="environment" hidden>
+        <input id="p-file-pick" type="file" accept="image/*" hidden>
+      </div>
+      <div class="fields">
+        <div class="field full"><label for="p-name">Nome</label><input id="p-name" required autocomplete="off" placeholder="ex.: Iogurte natural"></div>
+        <div class="field"><label for="p-cat">Categoria</label><select id="p-cat"></select></div>
+        <div class="field"><label for="p-zone">Onde fica</label><select id="p-zone"></select></div>
+        <div class="field"><label for="p-qty">Quantidade</label><input id="p-qty" type="number" min="0" step="1" value="1" inputmode="numeric"></div>
+        <div class="field"><label for="p-weight">Peso ou volume</label>
+          <div class="inline"><input id="p-weight" type="number" min="0" step="any" inputmode="decimal" placeholder="—" style="flex:1"><select id="p-wunit" style="width:76px"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="L">L</option></select></div>
+        </div>
+        <div class="field full"><label for="p-exp">Validade</label>
+          <input id="p-exp" type="date">
+          <div class="presets" id="p-presets">
+            <button type="button" class="preset" data-d="3">+3 dias</button><button type="button" class="preset" data-d="7">+1 semana</button><button type="button" class="preset" data-d="14">+2 semanas</button><button type="button" class="preset" data-d="30">+1 mês</button><button type="button" class="preset" data-d="90">+3 meses</button><button type="button" class="preset" data-d="">Sem validade</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn danger" type="button" id="p-del">Excluir</button>
+        <button class="btn" type="button" id="p-use">Usei um</button>
+      </div>
+      <div class="r"><button class="btn" type="button" data-close>Cancelar</button><button class="btn primary" type="submit" id="p-save">Salvar</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Diálogo da nota fiscal -->
+<dialog id="dlg-rec" class="wide">
+  <div class="dlg">
+    <div class="dlg-head"><div><h2>Escanear nota fiscal</h2><p class="muted" style="margin-top:4px">Cada linha da nota vira um produto que você pode guardar.</p></div><button class="icon-btn" type="button" data-close aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="dlg-body">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="t-photo" aria-selected="true" type="button">Foto</button>
+        <button class="tab" role="tab" id="t-text" aria-selected="false" type="button">Colar texto</button>
+      </div>
+      <div id="pane-photo">
+        <label class="drop" id="drop" for="r-file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <strong>Tire uma foto ou escolha uma imagem</strong>
+          <span style="font-size:13px">Deixe a nota esticada, reta e bem iluminada. JPG, PNG ou WebP.</span>
+        </label>
+        <input id="r-file" type="file" accept="image/*" hidden>
+        <div class="preview" id="r-preview" hidden style="margin-top:10px"><img id="r-img" alt="Prévia da nota"><div><strong id="r-fname"></strong><br><button class="btn small ghost" type="button" id="r-change">Escolher outra</button></div></div>
+      </div>
+      <div id="pane-text" hidden>
+        <div class="field"><label for="r-text">Texto da nota</label><textarea id="r-text" rows="8" placeholder="LEITE UHT INTEGRAL 1L   2 UN x 5,49   10,98&#10;BANANA PRATA KG   1,215 kg x 6,99   8,49&#10;..."></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" type="button" id="r-read">Ler nota</button>
+        <button class="btn" type="button" id="r-stop" hidden>Parar</button>
+        <div class="status" id="r-status" role="status"></div>
+      </div>
+      <p class="hint" id="r-hint"></p>
+      <div id="r-results" hidden>
+        <p class="receipt-meta" id="r-meta"></p>
+        <div class="rhead"><span></span><span>Produto</span><span>Qtd</span><span>Peso g</span><span>Categoria</span><span>Validade ≈</span></div>
+        <div class="rows" id="r-rows"></div>
+      </div>
+    </div>
+    <div class="dlg-foot" id="r-foot" hidden>
+      <span class="muted" id="r-count"></span>
+      <div class="r"><button class="btn" type="button" id="r-add">Pôr na bancada</button><button class="btn primary" type="button" id="r-addput">Adicionar e guardar</button></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ajustes -->
+<dialog id="dlg-set">
+  <div class="dlg">
+    <div class="dlg-head"><h2>Ajustes</h2><button class="icon-btn" type="button" data-close aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="dlg-body">
+      <section class="set-sec">
+        <h3>Leitura com IA <span class="pill" id="s-state">Desligada</span></h3>
+        <p id="s-ai-text"></p>
+      </section>
+      <section class="set-sec">
+        <h3>Família</h3>
+        <p>Todos da casa entram com a mesma senha. O que um muda aparece para os outros em poucos segundos.</p>
+        <div class="row-btns"><button class="btn small" type="button" id="s-logout">Sair deste aparelho</button></div>
+      </section>
+      <section class="set-sec">
+        <h3>Backup</h3>
+        <p>Tudo fica guardado no servidor da família. Exporte um backup de vez em quando para ter uma cópia sua, com fotos.</p>
+        <div class="row-btns"><button class="btn small" type="button" id="s-export">Exportar backup</button><button class="btn small" type="button" id="s-import">Importar backup</button><input id="s-file" type="file" accept="application/json,.json" hidden></div>
+      </section>
+      <section class="set-sec">
+        <h3>Apagar tudo</h3>
+        <p>Remove todos os produtos e prateleiras, para toda a família.</p>
+        <div class="row-btns"><button class="btn small danger" type="button" id="s-wipe">Apagar tudo</button><button class="btn small danger" type="button" id="s-wipe-yes" hidden>Sim, apagar tudo</button></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<!-- Entrar -->
+<dialog id="dlg-login">
+  <form class="dlg" id="f-login">
+    <div class="dlg-head"><div><h2><span style="color:var(--accent)">i</span>Feira</h2><p class="muted" style="margin-top:4px">Digite a senha da família para abrir a geladeira.</p></div></div>
+    <div class="dlg-body">
+      <div class="field"><label for="l-pass">Senha da família</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
+      <p class="status err" id="l-err" role="alert"></p>
+    </div>
+    <div class="dlg-foot"><div class="r"><button class="btn primary" type="submit" id="l-go">Entrar</button></div></div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clone = o => JSON.parse(JSON.stringify(o));
+const LOCALE = 'pt-BR';
+const plural = (n, one, many) => n === 1 ? one : many;
+
+/* ---------- Datas ---------- */
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const iso = d => { const z = n => String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); };
+const addDays = (n, from) => { const d = from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? new Date(from+'T00:00') : today(); d.setDate(d.getDate()+Number(n)); return iso(d); };
+const daysLeft = exp => exp ? Math.round((new Date(exp+'T00:00') - today())/86400000) : null;
+const fmtShort = exp => new Date(exp+'T00:00').toLocaleDateString(LOCALE,{day:'numeric',month:'short'}).replace('.', '');
+function statusOf(p){ const n = daysLeft(p.exp); if (n == null) return 'none'; if (n < 0) return 'bad'; if (n <= 2) return 'warn'; return 'ok'; }
+function bbText(p){
+  const n = daysLeft(p.exp); if (n == null) return '';
+  const pre = p.est ? '≈' : '';
+  if (n < -1) return 'Venceu há ' + (-n) + 'd';
+  if (n === -1) return 'Venceu ontem';
+  if (n === 0) return 'Hoje';
+  if (n === 1) return 'Amanhã';
+  if (n <= 21) return pre + n + 'd';
+  return pre + fmtShort(p.exp);
+}
+function sizeText(p){
+  const w = p.weight; if (w == null || w === '' || !(w > 0)) return '';
+  const r = n => String(+n.toFixed(2)).replace('.', ',');
+  if (p.wunit === 'kg') return r(w) + ' kg';
+  if (p.wunit === 'L') return r(w) + ' L';
+  if (p.wunit === 'ml') return w >= 1000 ? r(w/1000) + ' L' : Math.round(w) + ' ml';
+  return w >= 1000 ? r(w/1000) + ' kg' : Math.round(w) + ' g';
+}
+
+/* ---------- Categorias ---------- */
+const CATS = {
+  dairy:{label:'Laticínios',ico:'🥛',store:'door',life:7},
+  eggs:{label:'Ovos',ico:'🥚',store:'door',life:21},
+  meat:{label:'Carnes',ico:'🥩',store:'shelf',life:3},
+  fish:{label:'Peixes e frutos do mar',ico:'🐟',store:'shelf',life:2},
+  veg:{label:'Legumes e verduras',ico:'🥬',store:'drawer',life:6},
+  fruit:{label:'Frutas',ico:'🍎',store:'drawer',life:6},
+  drinks:{label:'Bebidas',ico:'🧃',store:'door',life:10},
+  sauces:{label:'Molhos e temperos',ico:'🫙',store:'door',life:60},
+  frozen:{label:'Congelados',ico:'🧊',store:'freezer',life:90},
+  bakery:{label:'Pães e padaria',ico:'🍞',store:'pantry',life:4},
+  leftovers:{label:'Sobras',ico:'🍲',store:'shelf',life:3},
+  snacks:{label:'Lanches e doces',ico:'🍫',store:'pantry',life:60},
+  pantry:{label:'Mercearia',ico:'🥫',store:'pantry',life:180},
+  household:{label:'Limpeza e higiene',ico:'🧴',store:'pantry',life:365},
+  other:{label:'Outros',ico:'📦',store:'shelf',life:14},
+};
+const KEYWORDS = {
+  eggs:'egg ovo ovos',
+  dairy:'milk leite yogurt iogurte yoghurt cheese queijo butter manteiga cream creme requeijao mussarela muçarela nata coalhada ricota',
+  meat:'chicken frango beef carne pork porco suino sausage linguica salsicha ham presunto bacon peito coxa sobrecoxa patinho alcatra picanha acem file moida mortadela salame',
+  fish:'fish peixe salmon salmao tilapia camarao shrimp atum bacalhau sardinha',
+  veg:'lettuce alface tomato tomate carrot cenoura onion cebola potato batata pepper pimentao cucumber pepino broccoli brocolis couve spinach espinafre cabbage repolho abobrinha zucchini coentro cheiro alho garlic beterraba macaxeira mandioca chuchu quiabo maxixe jerimum abobora',
+  fruit:'apple maca banana orange laranja grape uva mango manga lemon limao strawberry morango papaya mamao abacaxi pineapple melancia watermelon melao melon goiaba acerola caju kiwi pera pear abacate avocado',
+  frozen:'frozen congelado congelada sorvete icecream polpa pizza nuggets lasanha',
+  drinks:'juice suco soda refrigerante beer cerveja water agua wine vinho coca guarana cola kombucha energetico',
+  sauces:'ketchup mustard mostarda mayo maionese sauce molho jam geleia pesto tahine shoyu vinagre vinegar',
+  bakery:'bread pao bolo cake tortilla bisnaguinha croissant baguete',
+  snacks:'chocolate biscuit biscoito bolacha chips salgadinho cookie bombom amendoim',
+  pantry:'rice arroz feijao beans pasta macarrao espaguete flour farinha sugar acucar coffee cafe oil oleo azeite sal salt cereal aveia oats tapioca cuscuz fuba lentilha milho enlatado lata',
+  household:'detergent detergente sabao soap shampoo condicionador papel paper toilet higienico desinfetante amaciante esponja sponge alvejante sanitaria lixo trash dental toothpaste',
+  leftovers:'leftover sobra marmita',
+};
+const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function guessCat(name){
+  const n = ' ' + norm(name).replace(/[^a-z0-9 ]/g,' ') + ' ';
+  if (/\b(congelad|frozen)/.test(n)) return 'frozen';
+  for (const [cat, words] of Object.entries(KEYWORDS)) for (const w of words.split(' ')) if (w && n.includes(' '+w)) return cat;
+  return 'other';
+}
+
+/* ---------- Estado ---------- */
+const KINDS = {freezer:'Prateleira do congelador', shelf:'Prateleira', drawer:'Gaveta', door:'Compartimento da porta', pantry:'Prateleira do armário'};
+const DEFAULT_ZONES = [
+  {id:'freezer', name:'Congelador', kind:'freezer', size:'m'},
+  {id:'top', name:'Prateleira de cima', kind:'shelf', size:'m'},
+  {id:'middle', name:'Prateleira do meio', kind:'shelf', size:'m'},
+  {id:'bottom', name:'Prateleira de baixo', kind:'shelf', size:'m'},
+  {id:'veg', name:'Gaveta de legumes', kind:'drawer', size:'m'},
+  {id:'fruit', name:'Gaveta de frutas', kind:'drawer', size:'m'},
+  {id:'door1', name:'Laticínios e ovos', kind:'door', size:'m'},
+  {id:'door2', name:'Molhos', kind:'door', size:'s'},
+  {id:'door3', name:'Garrafas', kind:'door', size:'m'},
+  {id:'cupboard', name:'Armário', kind:'pantry', size:'m'},
+  {id:'sink', name:'Debaixo da pia', kind:'pantry', size:'s'},
+];
+const EXAMPLES = [
+  ['Iogurte grego','dairy',4,null,'g',2,'top'],['Requeijão','dairy',1,200,'g',7,'top'],['Sobra de feijoada','leftovers',1,null,'g',1,'middle'],
+  ['Peito de frango','meat',1,900,'g',-1,'bottom'],['Alface','veg',1,null,'g',3,'veg'],['Tomates','veg',6,null,'g',5,'veg'],['Mangas','fruit',3,null,'g',4,'fruit'],
+  ['Leite integral','dairy',2,1000,'ml',6,'door1'],['Ovos','eggs',12,null,'g',21,'door1'],['Mostarda','sauces',1,250,'g',120,'door2'],['Suco de laranja','drinks',1,1000,'ml',8,'door3'],
+  ['Polpa de açaí','frozen',4,100,'g',90,'freezer'],['Ervilha','frozen',1,500,'g',140,'freezer'],['Arroz','pantry',1,5,'kg',230,'cupboard'],['Detergente','household',2,500,'ml',null,'sink'],
+  ['Bananas','fruit',6,null,'g',3,null],['Queijo cheddar','dairy',1,200,'g',24,null],
+];
+const blank = () => ({v:1, temps:{fridge:4, freezer:-18}, zones:clone(DEFAULT_ZONES), products:[], updatedAt:0});
+const withExamples = () => { const s = blank(); s.products = EXAMPLES.map(([name,cat,qty,weight,wunit,d,zone], i) => ({id:'ex'+i, name, cat, qty, weight, wunit, exp:d==null?null:addDays(d), est:false, zone, order:i, store:null, example:true, added:iso(today()), hasPhoto:false, photoV:''})); return s; };
+const CACHE_KEY = 'ifeira.cache';
+function sanitize(d){
+  const s = blank();
+  if (!d || typeof d !== 'object') return s;
+  if (Array.isArray(d.zones)) s.zones = d.zones.filter(z => z && z.id && KINDS[z.kind]).map(z => ({id:String(z.id), name:String(z.name||KINDS[z.kind]), kind:z.kind, size:['s','m','l'].includes(z.size)?z.size:'m'}));
+  if (Array.isArray(d.products)) s.products = d.products.filter(p => p && p.id && p.name).map(p => ({
+    id:String(p.id), name:String(p.name), cat:CATS[p.cat]?p.cat:guessCat(p.name), qty:Math.max(0, Number(p.qty)||0),
+    weight:p.weight==null||p.weight===''?null:Number(p.weight), wunit:p.wunit||'g', exp:p.exp||null, est:!!p.est,
+    zone:p.zone||null, order:Number(p.order)||0, store:p.store||null, example:!!p.example, added:p.added||null,
+    hasPhoto:!!p.hasPhoto, photoV:typeof p.photoV === 'string' ? p.photoV.slice(0, 24) : '' }));
+  if (d.temps) s.temps = {fridge:Number.isFinite(+d.temps.fridge)?+d.temps.fridge:4, freezer:Number.isFinite(+d.temps.freezer)?+d.temps.freezer:-18};
+  const zids = new Set(s.zones.map(z => z.id));
+  s.products.forEach(p => { if (p.zone && !zids.has(p.zone)) p.zone = null; });
+  return s;
+}
+
+/* ---------- Sincronização com o servidor da família ---------- */
+let state = blank(), rev = '', authed = false, serverAI = false;
+const hasAI = () => serverAI;
+const layoutOf = s => ({zones:s.zones, temps:s.temps});
+const canon = v => Array.isArray(v) ? '[' + v.map(canon).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}'
+  : JSON.stringify(v === undefined ? null : v);
+let synced = new Map(), syncedLayout = '', dirty = false, saving = false, saveTimer = null, retryTimer = null;
+function markSynced(){ synced = new Map(state.products.map(p => [p.id, canon(p)])); syncedLayout = canon(layoutOf(state)); }
+function cacheSave(){ try { localStorage.setItem(CACHE_KEY, JSON.stringify({state, rev, synced:[...synced], syncedLayout})); } catch {} }
+try {
+  const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+  if (c && c.state) { state = sanitize(c.state); rev = c.rev || ''; synced = new Map(Array.isArray(c.synced) ? c.synced : []); syncedLayout = c.syncedLayout || ''; }
+  else markSynced();
+} catch { markSynced(); }
+function setSync(t){ $('#sync').textContent = t; }
+
+async function api(method, url, body, opts = {}){
+  const init = { method, headers:{}, credentials:'same-origin', signal:opts.signal };
+  if (body instanceof FormData) init.body = body;
+  else if (body instanceof Blob) { init.body = body; init.headers['content-type'] = body.type || 'image/jpeg'; }
+  else if (body !== undefined) { init.headers['content-type'] = 'application/json'; init.body = JSON.stringify(body); }
+  const r = await fetch(url, init);
+  let data = null;
+  if ((r.headers.get('content-type') || '').includes('json')) data = await r.json().catch(() => null);
+  if (r.status === 401) { showLogin(); }
+  if (!r.ok) { const e = new Error((data && data.error) || ('HTTP ' + r.status)); e.status = r.status; e.code = data && data.error; throw e; }
+  return data;
+}
+function pendingDiff(){
+  const upsert = [], del = [], ids = new Set();
+  for (const p of state.products) { ids.add(p.id); if (synced.get(p.id) !== canon(p)) upsert.push(p); }
+  for (const id of synced.keys()) if (!ids.has(id)) del.push(id);
+  const L = canon(layoutOf(state));
+  return {upsert, del, layoutChanged: L !== syncedLayout, L, empty: !upsert.length && !del.length && L === syncedLayout};
+}
+function commit(){
+  cacheSave(); render();
+  dirty = true; setSync('Salvando…');
+  clearTimeout(saveTimer); saveTimer = setTimeout(flush, 400);
+}
+async function flush(){
+  if (saving || !authed) return;
+  const d = pendingDiff();
+  if (d.empty) { dirty = false; setSync('Salvo para a família'); return; }
+  saving = true; clearTimeout(retryTimer);
+  const sent = d.upsert.map(p => [p.id, canon(p)]);
+  try {
+    const r = await api('POST', '/api/sync', {upsert:d.upsert, delete:d.del, layout: d.layoutChanged ? layoutOf(state) : null});
+    sent.forEach(([id, j]) => synced.set(id, j)); d.del.forEach(id => synced.delete(id));
+    if (d.layoutChanged) syncedLayout = d.L;
+    rev = (r && r.rev) || rev; saving = false; cacheSave();
+    if (!pendingDiff().empty) return flush();
+    dirty = false; setSync('Salvo para a família');
+  } catch (e) {
+    saving = false;
+    if (e.status === 401) { setSync('Entre para salvar'); return; }
+    setSync('Sem conexão; tentando de novo…');
+    retryTimer = setTimeout(flush, 5000);
+  }
+}
+function applyServer(r){
+  rev = r.rev || '';
+  if (!r.layout && !(r.products && r.products.length)) {
+    // Primeira vez neste servidor: começa com os exemplos.
+    state = withExamples(); synced = new Map(); syncedLayout = ''; commit(); return;
+  }
+  state = sanitize({zones: r.layout && r.layout.zones, temps: r.layout && r.layout.temps, products: r.products});
+  markSynced(); cacheSave(); render();
+  setSync('Salvo para a família');
+}
+async function pull(){
+  if (!authed || dirty || saving || dragging || document.hidden) return;
+  try {
+    const r = await api('GET', '/api/state?since=' + encodeURIComponent(rev));
+    if (r && r.changed && !dirty && !saving && !dragging) applyServer(r);
+  } catch {}
+}
+
+/* ---------- Fotos (no servidor) ---------- */
+const photoURL = p => p.hasPhoto ? `/api/photos/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.photoV || '0')}` : null;
+async function setPhoto(id, blob){
+  if (blob) { const r = await api('PUT', '/api/photos/' + encodeURIComponent(id), blob); return (r && r.v) || String(Date.now()); }
+  await api('DELETE', '/api/photos/' + encodeURIComponent(id)).catch(() => {});
+  return '';
+}
+
+/* ---------- Desenho ---------- */
+let editMode = false, query = '', dragging = false;
+const zonesOf = kind => state.zones.filter(z => z.kind === kind);
+const itemsIn = zid => state.products.filter(p => (p.zone||null) === zid).sort((a,b) => a.order - b.order);
+const icoHTML = p => { const u = photoURL(p); return u ? `<img class="ph" src="${esc(u)}" alt="" draggable="false" data-ico="${esc(CATS[p.cat]?.ico||'📦')}">` : `<span class="ico" aria-hidden="true">${CATS[p.cat]?.ico||'📦'}</span>`; };
+
+function chipHTML(p){
+  const s = statusOf(p), bb = bbText(p);
+  const q = [p.qty !== 1 ? p.qty + '×' : '', sizeText(p)].filter(Boolean).join(' · ');
+  const match = !query || norm(p.name).includes(norm(query));
+  const title = p.name + (p.exp ? ' — validade ' + fmtShort(p.exp) + (p.est ? ' (estimada)' : '') : '');
+  return `<div class="chip s-${s}${match?'':' dim'}" data-id="${esc(p.id)}" tabindex="0" role="button" title="${esc(title)}" aria-label="${esc(title)}">${icoHTML(p)}<span class="nm">${esc(p.name)}</span>${q?`<span class="q">${esc(q)}</span>`:''}${bb?`<span class="bb">${esc(bb)}</span>`:''}</div>`;
+}
+function zoneHTML(z){
+  return `<section class="zone k-${z.kind} size-${z.size}"><span class="tape" data-tape="${esc(z.id)}">${esc(z.name)}</span><div class="items" data-zone="${esc(z.id)}">${itemsIn(z.id).map(chipHTML).join('')}</div></section>`;
+}
+function render(){
+  const fr = $('#fridge');
+  fr.classList.toggle('editing', editMode);
+  const fz = zonesOf('freezer'), sh = zonesOf('shelf'), dr = zonesOf('drawer'), dz = zonesOf('door');
+  const t = n => String(n).replace('-', '−');
+  fr.innerHTML = `
+    <div class="cabinet">
+      ${fz.length ? `<div class="comp freezer"><div class="comp-label"><span>Congelador</span><span class="temp">${t(state.temps.freezer)} °C</span></div>${fz.map(zoneHTML).join('')}</div>` : ''}
+      <div class="comp"><div class="comp-label"><span>Geladeira</span><span class="temp">${t(state.temps.fridge)} °C</span></div>
+        ${sh.map(zoneHTML).join('')}
+        ${dr.length ? `<div class="drawers">${dr.map(zoneHTML).join('')}</div>` : ''}
+        ${!sh.length && !dr.length ? '<p class="empty-comp">Nenhuma prateleira ainda. Use "Editar prateleiras" para adicionar.</p>' : ''}
+      </div>
+    </div>
+    <div class="door"><div class="comp-label"><span>Porta</span></div>${dz.map(zoneHTML).join('') || '<p class="empty-comp">Nenhum compartimento na porta.</p>'}</div>`;
+  const pz = zonesOf('pantry');
+  $('#pantry').innerHTML = pz.map(zoneHTML).join('') || '<p class="muted">Nenhuma prateleira de armário. Adicione em "Editar prateleiras".</p>';
+  renderCounter(); renderSoon(); renderStats();
+  $('#examples').hidden = !state.products.some(p => p.example);
+  bindSortables();
+}
+function renderCounter(){
+  const el = $('#counter-area');
+  if (editMode) { el.innerHTML = layoutEditorHTML(); bindLayoutEditor(); return; }
+  const n = itemsIn(null).length;
+  el.innerHTML = `<section class="counter">
+    <h2>Bancada</h2>
+    <p class="sub">Itens novos esperam aqui. Arraste cada um para uma prateleira.</p>
+    <div class="items" data-zone="">${itemsIn(null).map(chipHTML).join('')}</div>
+    <div class="counter-foot">
+      <button class="btn small" type="button" id="btn-putaway" ${n?'':'disabled'}>Guardar para mim</button>
+      <span class="muted">${n} esperando</span>
+    </div>
+    <div class="bin" style="margin-top:10px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><div class="items" data-bin="1"></div></div>
+  </section>`;
+  $('#btn-putaway').onclick = () => { const ids = itemsIn(null).map(p => p.id); const moved = autoPlace(ids); commit(); toast(moved ? `${moved} ${plural(moved,'item guardado','itens guardados')}.` : 'Nenhuma prateleira combina com estes itens.'); };
+}
+function renderSoon(){
+  const list = state.products.filter(p => p.exp && daysLeft(p.exp) <= 5).sort((a,b) => daysLeft(a.exp) - daysLeft(b.exp)).slice(0, 8);
+  const where = p => p.zone ? (state.zones.find(z => z.id === p.zone)?.name || '') : 'Bancada';
+  $('#soon').innerHTML = list.length ? list.map(p => {
+    const n = daysLeft(p.exp), s = statusOf(p), u = photoURL(p);
+    return `<li data-id="${esc(p.id)}" tabindex="0">${u ? `<img src="${esc(u)}" alt="" data-ico="${esc(CATS[p.cat]?.ico||'📦')}">` : `<span aria-hidden="true">${CATS[p.cat]?.ico||'📦'}</span>`}<span style="min-width:0"><div class="nm">${esc(p.name)}</div><div class="w">${esc(where(p))}</div></span><span class="d" style="color:var(--${s==='ok'?'ink-2':s})">${n<0?'Vencido':n===0?'Hoje':n===1?'Amanhã':n+' dias'}</span></li>`;
+  }).join('') : '<li style="cursor:default" class="muted"><span></span><span>Nada vence nos próximos 5 dias.</span><span></span></li>';
+}
+function renderStats(){
+  const ps = state.products;
+  const exp = ps.filter(p => statusOf(p) === 'bad').length;
+  const soon = ps.filter(p => { const n = daysLeft(p.exp); return n != null && n >= 0 && n <= 3; }).length;
+  const loose = ps.filter(p => !p.zone).length;
+  $('#stats').innerHTML =
+    `<span class="stat"><b>${ps.length}</b> ${plural(ps.length,'item','itens')}</span>` +
+    `<span class="stat"><span class="dot" style="background:var(--warn)"></span><b>${soon}</b> vencem em 3 dias</span>` +
+    `<span class="stat"><span class="dot" style="background:var(--bad)"></span><b>${exp}</b> ${plural(exp,'vencido','vencidos')}</span>` +
+    `<span class="stat"><span class="dot" style="background:var(--ink-3)"></span><b>${loose}</b> na bancada</span>`;
+}
+document.addEventListener('error', e => {
+  const img = e.target; if (!(img instanceof HTMLImageElement) || !img.dataset.ico) return;
+  const s = document.createElement('span'); s.className = 'ico'; s.setAttribute('aria-hidden','true'); s.textContent = img.dataset.ico; img.replaceWith(s);
+}, true);
+
+/* ---------- Arrastar e soltar ---------- */
+let sortables = [];
+function bindSortables(){
+  sortables.forEach(s => { try { s.destroy(); } catch {} }); sortables = [];
+  if (!window.Sortable) return;
+  document.querySelectorAll('.items[data-zone]').forEach(el => {
+    sortables.push(new Sortable(el, {
+      group:'items', animation:180, ghostClass:'ghost', chosenClass:'chosen',
+      delayOnTouchOnly:true, delay:140, emptyInsertThreshold:24, fallbackTolerance:3,
+      onStart(){ dragging = true; },
+      onEnd(evt){ dragging = false; onDrop(evt); },
+    }));
+  });
+  const bin = document.querySelector('.items[data-bin]');
+  if (bin) sortables.push(new Sortable(bin, {
+    group:{name:'items', pull:false, put:true},
+    onAdd(evt){ const id = evt.item.dataset.id; evt.item.remove(); removeProduct(id, true); },
+  }));
+}
+function onDrop(evt){
+  if (evt.to && evt.to.dataset.bin) return;
+  const p = state.products.find(x => x.id === evt.item.dataset.id);
+  if (p) {
+    p.zone = evt.to.dataset.zone || null;
+    const fix = el => [...el.children].forEach((c, i) => { const q = state.products.find(x => x.id === c.dataset.id); if (q) q.order = i; });
+    fix(evt.to); if (evt.from !== evt.to) fix(evt.from);
+  }
+  requestAnimationFrame(commit);
+}
+function autoPlace(ids){
+  let moved = 0;
+  for (const id of ids) {
+    const p = state.products.find(x => x.id === id); if (!p || p.zone) continue;
+    const kind = p.store || CATS[p.cat]?.store || 'shelf';
+    let cands = zonesOf(kind);
+    if (!cands.length && kind !== 'pantry' && kind !== 'freezer') cands = zonesOf('shelf');
+    if (!cands.length) continue;
+    const best = cands.map(z => [z, itemsIn(z.id).length]).sort((a,b) => a[1]-b[1])[0][0];
+    p.zone = best.id; p.order = itemsIn(best.id).length; moved++;
+  }
+  return moved;
+}
+
+/* ---------- Avisos ---------- */
+function toast(msg, action, fn){
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = `<span>${esc(msg)}</span>`;
+  if (action) { const b = document.createElement('button'); b.textContent = action; b.onclick = () => { fn(); t.remove(); }; t.append(b); }
+  $('#toasts').append(t); setTimeout(() => t.remove(), action ? 6000 : 3500);
+}
+function removeProduct(id, viaBin){
+  const i = state.products.findIndex(p => p.id === id); if (i < 0) return;
+  const [p] = state.products.splice(i, 1); commit();
+  toast(`${p.name} ${viaBin ? 'acabou' : 'excluído'}.`, 'Desfazer', () => { state.products.splice(i, 0, p); commit(); });
+}
+
+/* ---------- Imagens ---------- */
+async function loadBitmap(file){
+  if (window.createImageBitmap) { try { return await createImageBitmap(file, {imageOrientation:'from-image'}); } catch {} }
+  return await new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = URL.createObjectURL(file); });
+}
+async function drawScaled(file, max){
+  const bmp = await loadBitmap(file);
+  const w = bmp.width, h = bmp.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w*k); c.height = Math.round(h*k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c;
+}
+const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+async function shrink(file, max, q){ return toBlob(await drawScaled(file, max), q); }
+async function blobToB64(blob){
+  const b = new Uint8Array(await blob.arrayBuffer()); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+const blobToDataURL = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+
+/* ---------- IA (roda no servidor, com a chave guardada lá) ---------- */
+async function aiReceipt(file, text, signal){
+  const fd = new FormData(); fd.append('today', iso(today()));
+  if (file) fd.append('image', await shrink(file, 1568, 0.85), 'nota.jpg'); else fd.append('text', text);
+  return api('POST', '/api/ai/receipt', fd, {signal});
+}
+async function aiIdentify(blob){
+  const fd = new FormData(); fd.append('today', iso(today())); fd.append('image', blob, 'produto.jpg');
+  return api('POST', '/api/ai/identify', fd);
+}
+function aiError(e){
+  if (e && e.name === 'AbortError') return 'Parado.';
+  const m = {
+    ai_disabled:'A leitura com IA não está ligada no servidor.',
+    ai_auth:'A chave da API no servidor não foi aceita. Confira ANTHROPIC_API_KEY na Vercel.',
+    ai_rate:'Muitos pedidos agora. Espere um minuto e tente de novo.',
+    ai_credit:'A conta da API está sem créditos.',
+    ai_model:'Modelo não encontrado. Confira ANTHROPIC_MODEL na Vercel.',
+    ai_bad_json:'A resposta veio embaralhada. Tente de novo.',
+    ai_timeout:'A leitura demorou demais. Tente de novo com uma foto mais nítida.',
+    ai_unreachable:'O servidor não conseguiu falar com o Claude. Tente de novo.',
+    too_large:'A imagem é grande demais. Tente outra foto.',
+    not_an_image:'Esse arquivo não é uma imagem.',
+  };
+  if (e && m[e.code]) return m[e.code];
+  if (e && e.status === 401) return 'Entre de novo para continuar.';
+  if (e && e.status) return 'A leitura falhou. Tente de novo.';
+  return 'Sem conexão. Verifique a internet e tente de novo.';
+}
+
+/* ---------- Leitor gratuito (OCR no aparelho) ---------- */
+let tessLoading = null, ocrWorker = null;
+function loadTesseract(){
+  if (window.Tesseract) return Promise.resolve();
+  return tessLoading || (tessLoading = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.onload = res; s.onerror = () => { tessLoading = null; rej(new Error('load')); }; document.head.append(s);
+  }));
+}
+async function prepForOCR(file){
+  const c = await drawScaled(file, 2000), ctx = c.getContext('2d');
+  const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { let g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; g = Math.max(0, Math.min(255, (g - 128) * 1.5 + 140)); d[i] = d[i+1] = d[i+2] = g; }
+  ctx.putImageData(img, 0, 0);
+  return await new Promise(r => c.toBlob(r, 'image/png'));
+}
+async function ocr(file, onProgress){
+  await loadTesseract();
+  const prepared = await prepForOCR(file);
+  ocrWorker = await Tesseract.createWorker('por', 1, { logger: m => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); else if (/load/.test(m.status)) onProgress(-1); } });
+  try { const { data } = await ocrWorker.recognize(prepared); return data.text || ''; }
+  finally { try { await ocrWorker.terminate(); } catch {} ocrWorker = null; }
+}
+
+/* ---------- Diálogo de produto ---------- */
+const dlgP = $('#dlg-prod'); let editing = null, draft = null;
+$('#p-cat').innerHTML = Object.entries(CATS).map(([k,c]) => `<option value="${k}">${c.ico}  ${c.label}</option>`).join('');
+function zoneOptions(sel){
+  const grp = (label, kinds) => { const zs = state.zones.filter(z => kinds.includes(z.kind)); return zs.length ? `<optgroup label="${label}">${zs.map(z => `<option value="${esc(z.id)}"${z.id===sel?' selected':''}>${esc(z.name)}</option>`).join('')}</optgroup>` : ''; };
+  return `<option value=""${!sel?' selected':''}>Bancada (guardar depois)</option>` + grp('Congelador',['freezer']) + grp('Geladeira',['shelf','drawer']) + grp('Porta',['door']) + grp('Despensa',['pantry']);
+}
+let catTouched = false, estDraft = false;
+function openProduct(p){
+  editing = p ? p.id : null; catTouched = !!p; estDraft = p ? p.est : false;
+  draft = { blob:null, previewURL:p ? photoURL(p) : null, changed:false };
+  $('#p-title').textContent = p ? 'Editar produto' : 'Adicionar produto';
+  $('#p-name').value = p?.name || '';
+  $('#p-cat').value = p?.cat || 'other';
+  $('#p-qty').value = p ? p.qty : 1;
+  $('#p-weight').value = p?.weight ?? '';
+  $('#p-wunit').value = p?.wunit || 'g';
+  $('#p-exp').value = p?.exp || '';
+  $('#p-zone').innerHTML = zoneOptions(p?.zone || null);
+  $('#p-del').hidden = !p; $('#p-use').hidden = !p;
+  $('#p-save').textContent = p ? 'Salvar' : 'Adicionar'; $('#p-save').disabled = false;
+  $('#p-photo-busy').hidden = true;
+  updatePhotoUI();
+  dlgP.showModal();
+}
+function updatePhotoUI(){
+  if (!draft) return;
+  const img = $('#p-photo'), has = !!draft.previewURL;
+  img.hidden = !has; if (has && img.getAttribute('src') !== draft.previewURL) img.src = draft.previewURL;
+  $('#p-photo-empty').style.display = has ? 'none' : '';
+  $('#p-photo-rm').hidden = !has;
+  $('#p-cam').textContent = has ? 'Tirar outra' : 'Tirar foto';
+  $('#p-identify').hidden = !(draft.blob && hasAI());
+  $('#p-photo-note').textContent = draft.blob && hasAI() ? 'Toque em "Preencher com a foto" para o Claude ler nome, tamanho e validade da embalagem.'
+    : draft.blob ? 'A leitura de fotos com IA não está ligada no servidor.'
+    : 'Uma foto ajuda a achar o produto na geladeira.';
+}
+$('#p-photo-box').onclick = () => $('#p-file-cam').click();
+$('#p-cam').onclick = () => $('#p-file-cam').click();
+$('#p-pick').onclick = () => $('#p-file-pick').click();
+['#p-file-cam','#p-file-pick'].forEach(s => $(s).addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) takePhoto(f); }));
+async function takePhoto(file){
+  if (!/^image\//.test(file.type)) { toast('Esse arquivo não é uma imagem. Escolha uma foto JPG, PNG ou WebP.'); return; }
+  const d = draft; $('#p-photo-busy').hidden = false;
+  try { d.blob = await shrink(file, 1024, 0.8); }
+  catch { toast('Não consegui abrir essa imagem. Tente outra foto.'); return; }
+  finally { $('#p-photo-busy').hidden = true; }
+  if (draft !== d) return;
+  d.changed = true; d.previewURL = URL.createObjectURL(d.blob);
+  updatePhotoUI();
+}
+$('#p-photo-rm').onclick = () => { draft.blob = null; draft.previewURL = null; draft.changed = true; updatePhotoUI(); };
+$('#p-identify').onclick = async () => {
+  if (!draft?.blob || !hasAI()) return;
+  const btn = $('#p-identify'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Lendo a embalagem…';
+  try {
+    const r = await aiIdentify(draft.blob);
+    if (r && r.name) $('#p-name').value = String(r.name).slice(0, 80);
+    if (r && CATS[r.category]) { $('#p-cat').value = r.category; catTouched = true; }
+    if (r && Number(r.weight) > 0) { $('#p-weight').value = +Number(r.weight).toFixed(2); if (['g','kg','ml','L'].includes(r.weight_unit)) $('#p-wunit').value = r.weight_unit; }
+    if (r && /^\d{4}-\d{2}-\d{2}$/.test(r.expiry || '') && r.expiry_printed) { $('#p-exp').value = r.expiry; estDraft = false; }
+    else if (r && Number(r.shelf_life_days) > 0 && !$('#p-exp').value) { $('#p-exp').value = addDays(Math.round(r.shelf_life_days)); estDraft = true; }
+    toast('Campos preenchidos pela foto. Confira antes de salvar.');
+  } catch (e) { toast(aiError(e)); }
+  finally { btn.disabled = false; btn.textContent = old; }
+};
+$('#p-name').addEventListener('input', e => { if (!catTouched) $('#p-cat').value = guessCat(e.target.value); });
+$('#p-cat').addEventListener('change', () => { catTouched = true; });
+$('#p-exp').addEventListener('input', () => { estDraft = false; });
+$('#p-presets').addEventListener('click', e => { const b = e.target.closest('.preset'); if (!b) return; $('#p-exp').value = b.dataset.d ? addDays(b.dataset.d) : ''; estDraft = false; });
+$('#f-prod').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#p-name').value.trim(); if (!name) { $('#p-name').focus(); return; }
+  const d = draft;
+  const w = $('#p-weight').value;
+  const data = { name, cat:$('#p-cat').value, qty:Math.max(0, parseFloat($('#p-qty').value)||0), weight:w===''?null:Number(w), wunit:$('#p-wunit').value, exp:$('#p-exp').value||null, est:estDraft, zone:$('#p-zone').value||null };
+  let p;
+  if (editing) {
+    p = state.products.find(x => x.id === editing);
+    if (p) { if (p.zone !== data.zone) p.order = itemsIn(data.zone).length; Object.assign(p, data); }
+  } else {
+    p = { id:uid(), ...data, order:itemsIn(data.zone).length, store:null, added:iso(today()), hasPhoto:false, photoV:'' };
+    state.products.push(p);
+    toast(data.zone ? `${name} adicionado.` : `${name} está na bancada.`);
+  }
+  if (p && d && d.changed) {
+    try { p.photoV = await setPhoto(p.id, d.blob); p.hasPhoto = !!d.blob; }
+    catch { p.hasPhoto = false; toast('Não consegui guardar a foto. O aparelho pode estar sem espaço.'); }
+  }
+  draft = null; dlgP.close(); commit();
+});
+$('#p-del').onclick = () => { const id = editing; dlgP.close(); removeProduct(id); };
+$('#p-use').onclick = () => {
+  const p = state.products.find(x => x.id === editing); if (!p) return;
+  dlgP.close();
+  if (p.qty > 1) { p.qty -= 1; commit(); toast(`Restam ${p.qty} de ${p.name}.`); }
+  else removeProduct(p.id, true);
+};
+dlgP.addEventListener('close', () => { draft = null; });
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+
+document.addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (c && !dragging) { const p = state.products.find(x => x.id === c.dataset.id); if (p) openProduct(p); return; }
+  const li = e.target.closest('.soon li[data-id]'); if (li) highlight(li.dataset.id);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const c = e.target.closest?.('.chip'); if (c) { e.preventDefault(); const p = state.products.find(x => x.id === c.dataset.id); if (p) openProduct(p); return; }
+  const li = e.target.closest?.('.soon li[data-id]'); if (li) { e.preventDefault(); highlight(li.dataset.id); }
+});
+function highlight(id){
+  const el = document.querySelector(`.chip[data-id="${CSS.escape(id)}"]`); if (!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+}
+
+/* ---------- Editor de prateleiras ---------- */
+const SECTIONS = [['Congelador',['freezer'],'freezer'],['Prateleiras e gavetas',['shelf','drawer'],'shelf'],['Porta',['door'],'door'],['Despensa',['pantry'],'pantry']];
+const ic = {
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+const KIND_SHORT = {freezer:'Congelador', shelf:'Prateleira', drawer:'Gaveta', door:'Porta', pantry:'Armário'};
+function layoutEditorHTML(){
+  return `<section class="panel"><div class="panel-head"><div><h2>Prateleiras</h2><p class="sub">Dê nome, altura e ordem às prateleiras. A geladeira muda na hora.</p></div><button class="btn small primary" type="button" id="lay-done">Pronto</button></div>
+  <div class="lay-sec" style="margin-top:0"><h3>Temperaturas</h3>
+    <div class="lay-row" style="grid-template-columns:auto 72px auto 72px"><label for="t-fr">Geladeira °C</label><input id="t-fr" type="number" step="1" value="${state.temps.fridge}"><label for="t-fz">Congelador °C</label><input id="t-fz" type="number" step="1" value="${state.temps.freezer}"></div>
+  </div>
+  ${SECTIONS.map(([label, kinds, def]) => {
+    const zs = state.zones.filter(z => kinds.includes(z.kind));
+    return `<div class="lay-sec"><h3><span>${label}</span><button class="btn small ghost" type="button" data-add="${def}">+ Adicionar</button></h3>
+      ${zs.map(z => `<div class="lay-row" data-zid="${esc(z.id)}">
+        <input value="${esc(z.name)}" data-f="name" aria-label="Nome" id="zn-${esc(z.id)}">
+        ${kinds.length > 1 ? `<select data-f="kind" aria-label="Tipo" id="zk-${esc(z.id)}">${kinds.map(k => `<option value="${k}"${k===z.kind?' selected':''}>${KIND_SHORT[k]}</option>`).join('')}</select>` : '<span></span>'}
+        <select data-f="size" aria-label="Altura" id="zs-${esc(z.id)}"><option value="s"${z.size==='s'?' selected':''}>Baixa</option><option value="m"${z.size==='m'?' selected':''}>Média</option><option value="l"${z.size==='l'?' selected':''}>Alta</option></select>
+        <span class="mv"><button class="icon-btn" type="button" data-mv="-1" aria-label="Subir">${ic.up}</button><button class="icon-btn" type="button" data-mv="1" aria-label="Descer">${ic.down}</button><button class="icon-btn" type="button" data-rm aria-label="Remover">${ic.x}</button></span>
+      </div>`).join('') || '<p class="muted">Nenhuma.</p>'}</div>`;
+  }).join('')}
+  <div class="lay-sec"><button class="btn small ghost" type="button" id="lay-reset">Voltar ao layout padrão</button></div>
+  </section>`;
+}
+function bindLayoutEditor(){
+  const root = $('#counter-area');
+  $('#lay-done').onclick = () => toggleEdit(false);
+  $('#t-fr').onchange = e => { state.temps.fridge = Number(e.target.value)||0; commit(); };
+  $('#t-fz').onchange = e => { state.temps.freezer = Number(e.target.value)||0; commit(); };
+  root.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const kind = b.dataset.add, n = zonesOf(kind).length + 1;
+    state.zones.push({id:'z'+uid(), name:`${KINDS[kind]} ${n}`, kind, size:kind==='door'?'s':'m'}); commit();
+  });
+  root.querySelectorAll('.lay-row[data-zid]').forEach(row => {
+    const z = state.zones.find(x => x.id === row.dataset.zid); if (!z) return;
+    const name = row.querySelector('[data-f=name]');
+    name.oninput = () => { const t = document.querySelector(`[data-tape="${CSS.escape(z.id)}"]`); if (t) t.textContent = name.value; };
+    name.onchange = () => { z.name = name.value.trim() || KINDS[z.kind]; commit(); };
+    const k = row.querySelector('[data-f=kind]'); if (k) k.onchange = () => { z.kind = k.value; commit(); };
+    row.querySelector('[data-f=size]').onchange = e => { z.size = e.target.value; commit(); };
+    row.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => {
+      const kinds = SECTIONS.find(s => s[1].includes(z.kind))[1];
+      const peers = state.zones.filter(x => kinds.includes(x.kind));
+      const i = peers.indexOf(z), j = i + Number(b.dataset.mv); if (j < 0 || j >= peers.length) return;
+      const a = state.zones.indexOf(peers[i]), c = state.zones.indexOf(peers[j]);
+      [state.zones[a], state.zones[c]] = [state.zones[c], state.zones[a]]; commit();
+    });
+    row.querySelector('[data-rm]').onclick = () => {
+      const idx = state.zones.indexOf(z), moved = state.products.filter(p => p.zone === z.id);
+      state.zones.splice(idx, 1); moved.forEach(p => p.zone = null); commit();
+      toast(`${z.name} removida${moved.length ? `; ${moved.length} ${plural(moved.length,'item foi','itens foram')} para a bancada` : ''}.`, 'Desfazer', () => { state.zones.splice(idx, 0, z); moved.forEach(p => p.zone = z.id); commit(); });
+    };
+  });
+  $('#lay-reset').onclick = () => {
+    const prev = clone(state);
+    const ids = new Set(DEFAULT_ZONES.map(z => z.id));
+    state.zones = clone(DEFAULT_ZONES); state.products.forEach(p => { if (p.zone && !ids.has(p.zone)) p.zone = null; }); commit();
+    toast('Layout restaurado.', 'Desfazer', () => { state = prev; commit(); });
+  };
+}
+function toggleEdit(on){ editMode = on; $('#btn-layout').classList.toggle('on', on); $('#btn-layout').setAttribute('aria-pressed', String(on)); render(); }
+
+/* ---------- Nota fiscal ---------- */
+const dlgR = $('#dlg-rec'); let recMode = 'photo', recFile = null, recCtl = null, recItems = [], ocrCancelled = false;
+function setTab(m){
+  recMode = m;
+  $('#t-photo').setAttribute('aria-selected', String(m==='photo')); $('#t-text').setAttribute('aria-selected', String(m==='text'));
+  $('#pane-photo').hidden = m !== 'photo'; $('#pane-text').hidden = m !== 'text';
+  $('#r-hint').textContent = hasAI() ? 'Leitura com IA ligada (Claude).'
+    : (m === 'photo' ? 'Leitor gratuito no aparelho. Funciona melhor com a nota reta e bem iluminada. A leitura com o Claude é mais precisa e pode ser ligada no servidor.' : 'Leitor gratuito. A leitura com o Claude é mais precisa e pode ser ligada no servidor.');
+}
+$('#t-photo').onclick = () => setTab('photo'); $('#t-text').onclick = () => setTab('text');
+function setFile(f){
+  if (!f) return; if (!/^image\//.test(f.type)) { recStatus('Esse arquivo não é uma imagem. Escolha uma foto JPG, PNG ou WebP.', true); return; }
+  recFile = f; $('#r-img').src = URL.createObjectURL(f); $('#r-fname').textContent = f.name || 'Foto da nota';
+  $('#r-preview').hidden = false; $('#drop').hidden = true; recStatus('');
+}
+$('#r-file').onchange = e => setFile(e.target.files[0]);
+$('#r-change').onclick = () => $('#r-file').click();
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
+function recStatus(msg, err, busy){
+  const s = $('#r-status'); s.className = 'status' + (err ? ' err' : '');
+  s.innerHTML = (busy ? '<span class="spinner"></span>' : '') + `<span>${esc(msg)}</span>`;
+}
+function localParse(text){
+  const skip = /(total|subtotal|troco|dinheiro|cart[aã]o|cr[eé]dito|d[eé]bito|cpf|cnpj|tribut|desconto|valor|pagamento|change|cash|tax|visa|master|pix|qtd|c[oó]digo|nfc|sat|consumidor|endere|cupom|fiscal|operador|caixa|ie:|im:|data|hora|protocolo|chave|acesso)/i;
+  const out = [];
+  for (let line of String(text).split(/\n+/)) {
+    line = line.trim(); if (!line || skip.test(line)) continue;
+    if (!/\d+[.,]\d{2}/.test(line)) continue;
+    let weight = null, qty = 1;
+    const kg = line.match(/(\d+[.,]\d{1,3})\s*kg/i); if (kg) weight = Math.round(parseFloat(kg[1].replace(',','.'))*1000);
+    const un = line.match(/(\d+)\s*(?:un|und|x)\b/i); if (un && !kg) qty = parseInt(un[1]) || 1;
+    let name = line.replace(/^\s*\d{1,4}\s+/, '').replace(/\b\d{6,}\b/g,'')
+      .replace(/\s+(\d+\s*(un|und|pc|pct)\b|\d+[.,]\d{1,3}\s*kg\b|x\s+\d|\d+[.,]\d{2}\b).*$/i, '')
+      .replace(/(\s+(kg|un|und|x))+\s*$/i, '')
+      .replace(/(\d+[.,]?\d*\s*)+$/,'').replace(/[*#|_]+/g,' ').replace(/\s{2,}/g,' ').trim();
+    const sz = name.match(/(\d+[.,]?\d*)\s*(kg|g|l|ml)\b/i);
+    if (sz && !weight) { const v = parseFloat(sz[1].replace(',','.')); const u = sz[2].toLowerCase(); weight = Math.round(u==='kg'||u==='l' ? v*1000 : v); }
+    if (name.replace(/[^a-zà-ú]/gi,'').length < 3) continue;
+    name = name.toLowerCase().replace(/(^|\s)\p{L}/gu, c => c.toUpperCase()).replace(/(\d)\s*(kg|ml|g|l)\b/gi, (m, n, u) => n + (u.toLowerCase() === 'l' ? 'L' : u.toLowerCase()));
+    out.push({name, qty: Math.min(qty, 99), weight_g:weight, category:guessCat(name)});
+  }
+  return {store:null, date:null, items:out};
+}
+function normalizeItems(res){
+  const date = res && /^\d{4}-\d{2}-\d{2}$/.test(res.date||'') && daysLeft(res.date) <= 0 && daysLeft(res.date) > -60 ? res.date : null;
+  const items = (res && Array.isArray(res.items) ? res.items : []).filter(i => i && i.name).map(i => {
+    const cat = CATS[i.category] ? i.category : guessCat(i.name);
+    const store = KINDS[i.storage] ? i.storage : CATS[cat].store;
+    const life = Number(i.shelf_life_days) > 0 ? Math.round(Number(i.shelf_life_days)) : CATS[cat].life;
+    return { on:true, name:String(i.name).slice(0,80), qty:Math.max(1, Math.round(Number(i.qty)||1)), weight:Number(i.weight_g) > 0 ? Math.round(Number(i.weight_g)) : null, cat, store, exp:addDays(life, date) };
+  });
+  return {store:res?.store || null, date, items};
+}
+function busy(on){ $('#r-read').disabled = on; $('#r-stop').hidden = !on; }
+async function readReceipt(){
+  const text = $('#r-text').value.trim();
+  if (recMode === 'photo' && !recFile) { recStatus('Escolha primeiro uma foto da nota.', true); return; }
+  if (recMode === 'text' && !text) { recStatus('Cole primeiro o texto da nota.', true); return; }
+  if (hasAI()) {
+    recCtl = new AbortController(); busy(true);
+    recStatus('Lendo a nota com o Claude… costuma levar de 10 a 40 segundos.', false, true);
+    try {
+      const r = normalizeItems(await aiReceipt(recMode === 'photo' ? recFile : null, recMode === 'text' ? text : null, recCtl.signal));
+      if (!r.items.length) recStatus('Não encontrei produtos nesta nota. Tente uma foto mais nítida ou cole o texto.', true);
+      else showResults(r, false);
+    } catch (e) { recStatus(aiError(e), !(e && e.name === 'AbortError')); }
+    finally { busy(false); recCtl = null; }
+    return;
+  }
+  if (recMode === 'text') { showResults(normalizeItems(localParse(text)), true); return; }
+  ocrCancelled = false; busy(true);
+  recStatus('Preparando o leitor… na primeira vez ele baixa uns 15 MB.', false, true);
+  try {
+    const out = await ocr(recFile, pct => { if (ocrCancelled) return; recStatus(pct < 0 ? 'Preparando o leitor…' : `Lendo a nota… ${pct}%`, false, true); });
+    if (ocrCancelled) return;
+    $('#r-text').value = out.trim();
+    const r = normalizeItems(localParse(out));
+    if (!r.items.length) recStatus('Não consegui ler produtos nesta foto. Tente uma foto mais reta e iluminada, ou confira o texto na aba "Colar texto".', true);
+    else showResults(r, true, true);
+  } catch {
+    if (!ocrCancelled) recStatus('Não consegui carregar o leitor. Verifique a internet e tente de novo.', true);
+  } finally { busy(false); }
+}
+$('#r-read').onclick = readReceipt;
+$('#r-stop').onclick = async () => {
+  if (recCtl) { recCtl.abort(); return; }
+  ocrCancelled = true; recStatus('Parado.');
+  if (ocrWorker) { try { await ocrWorker.terminate(); } catch {} ocrWorker = null; }
+  busy(false);
+};
+function showResults(r, local, fromOCR){
+  recItems = r.items;
+  if (!recItems.length) { recStatus('Nenhuma linha de produto encontrada. Confira o texto e tente de novo.', true); return; }
+  recStatus(local ? `Encontrei ${recItems.length} ${plural(recItems.length,'linha','linhas')}. Confira os nomes antes de adicionar${fromOCR ? '; o texto lido está na aba "Colar texto" se quiser corrigir e ler de novo' : ''}.` : `Encontrei ${recItems.length} produtos. Desmarque o que não quiser acompanhar.`);
+  $('#r-meta').textContent = [r.store, r.date ? 'Comprado em ' + fmtShort(r.date) : null, 'As validades são estimadas; ajuste se precisar'].filter(Boolean).join(' · ');
+  const catOpts = sel => Object.entries(CATS).map(([k,c]) => `<option value="${k}"${k===sel?' selected':''}>${c.ico} ${c.label}</option>`).join('');
+  $('#r-rows').innerHTML = recItems.map((it, i) => `<div class="rrow" data-i="${i}">
+    <input type="checkbox" checked data-f="on" aria-label="Incluir" id="ri-on-${i}">
+    <input class="c-name" value="${esc(it.name)}" data-f="name" aria-label="Produto" id="ri-n-${i}">
+    <input class="c-qty" type="number" min="1" step="1" value="${it.qty}" data-f="qty" aria-label="Quantidade" id="ri-q-${i}">
+    <input type="number" min="0" step="any" value="${it.weight ?? ''}" placeholder="—" data-f="weight" aria-label="Peso em gramas" id="ri-w-${i}">
+    <select data-f="cat" aria-label="Categoria" id="ri-c-${i}">${catOpts(it.cat)}</select>
+    <input type="date" value="${it.exp}" data-f="exp" aria-label="Validade" id="ri-e-${i}">
+  </div>`).join('');
+  $('#r-results').hidden = false; $('#r-foot').hidden = false; countRec();
+}
+$('#r-rows').addEventListener('input', e => {
+  const row = e.target.closest('.rrow'); if (!row) return; const it = recItems[row.dataset.i]; const f = e.target.dataset.f;
+  if (f === 'on') { it.on = e.target.checked; row.classList.toggle('off', !it.on); countRec(); }
+  else if (f === 'qty') it.qty = Math.max(1, parseInt(e.target.value)||1);
+  else if (f === 'weight') it.weight = e.target.value === '' ? null : Number(e.target.value);
+  else if (f === 'cat') { it.cat = e.target.value; it.store = CATS[it.cat].store; }
+  else it[f] = e.target.value;
+});
+function countRec(){ const n = recItems.filter(i => i.on).length; $('#r-count').textContent = `${n} de ${recItems.length} ${plural(n,'selecionado','selecionados')}`; $('#r-add').disabled = $('#r-addput').disabled = !n; }
+function addRec(putAway){
+  const ids = []; const base = itemsIn(null).length;
+  recItems.filter(i => i.on && i.name.trim()).forEach((i, k) => {
+    const id = uid(); ids.push(id);
+    state.products.push({ id, name:i.name.trim(), cat:i.cat, qty:i.qty, weight:i.weight, wunit:'g', exp:i.exp||null, est:true, zone:null, order:base+k, store:i.store, added:iso(today()), hasPhoto:false, photoV:'' });
+  });
+  const moved = putAway ? autoPlace(ids) : 0;
+  dlgR.close(); commit();
+  const n = ids.length, left = n - moved;
+  toast(putAway ? `${n} ${plural(n,'item adicionado','itens adicionados')}; ${moved} ${plural(moved,'guardado','guardados')}${left ? `, ${left} na bancada` : ''}.` : `${n} ${plural(n,'item foi','itens foram')} para a bancada. Arraste para a geladeira.`);
+}
+$('#r-add').onclick = () => addRec(false);
+$('#r-addput').onclick = () => addRec(true);
+function openReceipt(){
+  recFile = null; recItems = []; $('#r-file').value = ''; $('#r-preview').hidden = true; $('#drop').hidden = false;
+  $('#r-results').hidden = true; $('#r-foot').hidden = true; recStatus(''); busy(false);
+  setTab('photo'); dlgR.showModal();
+}
+dlgR.addEventListener('close', () => { if (recCtl) recCtl.abort(); if (ocrWorker) { ocrCancelled = true; ocrWorker.terminate().catch(() => {}); ocrWorker = null; } });
+
+/* ---------- Ajustes, backup ---------- */
+const dlgS = $('#dlg-set');
+function openSettings(){
+  $('#s-state').textContent = hasAI() ? 'Ligada' : 'Desligada'; $('#s-state').classList.toggle('on', hasAI());
+  $('#s-ai-text').textContent = hasAI()
+    ? 'O Claude lê as notas fiscais e as fotos de produtos. A chave da API fica guardada só no servidor.'
+    : 'As notas são lidas com o leitor gratuito do aparelho. Para ligar a leitura com o Claude, adicione ANTHROPIC_API_KEY nas variáveis de ambiente do projeto na Vercel.';
+  $('#s-wipe-yes').hidden = true; $('#s-wipe').hidden = false;
+  dlgS.showModal();
+}
+$('#s-logout').onclick = async () => {
+  try { await api('POST', '/api/logout'); } catch {}
+  try { localStorage.removeItem(CACHE_KEY); } catch {}
+  location.reload();
+};
+$('#s-export').onclick = async () => {
+  const b = $('#s-export'); b.disabled = true;
+  const photos = {};
+  for (const p of state.products) if (p.hasPhoto) { try { const r = await fetch(photoURL(p)); if (r.ok) photos[p.id] = await blobToDataURL(await r.blob()); } catch {} }
+  const blob = new Blob([JSON.stringify({app:'ifeira', v:1, exported:new Date().toISOString(), state, photos})], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ifeira-backup-${iso(today())}.json`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  b.disabled = false; toast('Backup exportado.');
+};
+$('#s-import').onclick = () => $('#s-file').click();
+$('#s-file').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  let d; try { d = JSON.parse(await f.text()); } catch { toast('Esse arquivo não é um backup do iFeira.'); return; }
+  if (!d || d.app !== 'ifeira' || !d.state) { toast('Esse arquivo não é um backup do iFeira.'); return; }
+  dlgS.close(); toast('Restaurando o backup…');
+  try {
+    const next = sanitize(d.state);
+    for (const p of next.products) {
+      const url = d.photos && d.photos[p.id];
+      if (typeof url === 'string' && url.startsWith('data:image/')) { p.photoV = await setPhoto(p.id, await (await fetch(url)).blob()); p.hasPhoto = true; }
+      else { p.hasPhoto = false; p.photoV = ''; }
+    }
+    state = next; commit();
+    toast(`Backup restaurado: ${state.products.length} ${plural(state.products.length,'item','itens')}.`);
+  } catch { toast('Não consegui restaurar o backup. Tente de novo.'); }
+};
+$('#s-wipe').onclick = () => { $('#s-wipe').hidden = true; $('#s-wipe-yes').hidden = false; };
+$('#s-wipe-yes').onclick = () => { state = blank(); commit(); dlgS.close(); toast('Tudo apagado.'); };
+
+/* ---------- Entrar ---------- */
+const dlgL = $('#dlg-login');
+dlgL.addEventListener('cancel', e => e.preventDefault());
+function showLogin(msg){
+  authed = false;
+  $('#l-err').textContent = msg || '';
+  if (!dlgL.open) { dlgL.showModal(); setTimeout(() => $('#l-pass').focus(), 30); }
+}
+$('#f-login').addEventListener('submit', async e => {
+  e.preventDefault();
+  const b = $('#l-go'); b.disabled = true; $('#l-err').textContent = '';
+  try {
+    const r = await fetch('/api/login', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({password:$('#l-pass').value})});
+    if (r.ok) { dlgL.close(); $('#l-pass').value = ''; authed = true; await afterLogin(); }
+    else { const j = await r.json().catch(() => ({})); $('#l-err').textContent = j.error === 'setup' ? 'O servidor ainda não está configurado (falta FAMILY_PASSWORD).' : 'Senha incorreta. Tente de novo.'; }
+  } catch { $('#l-err').textContent = 'Sem conexão. Verifique a internet e tente de novo.'; }
+  finally { b.disabled = false; }
+});
+async function afterLogin(){
+  if (rev && !pendingDiff().empty) { dirty = true; await flush(); }   // mudanças feitas sem conexão
+  try { const r = await api('GET', '/api/state'); if (r && !dirty && !saving) applyServer(r); }
+  catch (e) { if (e.status !== 401) setSync('Sem conexão; mostrando a última cópia'); }
+}
+async function boot(){
+  let cfg;
+  try { const r = await fetch('/api/config', {cache:'no-store', credentials:'same-origin'}); cfg = await r.json(); }
+  catch { setSync('Sem conexão; mostrando a última cópia'); return; }
+  serverAI = !!cfg.ai;
+  if (cfg.setup && cfg.setup.length) { showLogin('Falta configurar o servidor: ' + cfg.setup.join('; ') + '.'); return; }
+  if (!cfg.authed) { showLogin(); return; }
+  authed = true; await afterLogin();
+}
+
+/* ---------- Ligações ---------- */
+$('#today').textContent = new Date().toLocaleDateString(LOCALE, {weekday:'long', day:'numeric', month:'long'});
+$('#btn-add').onclick = () => openProduct(null);
+$('#btn-scan').onclick = openReceipt;
+$('#btn-layout').onclick = () => toggleEdit(!editMode);
+$('#btn-settings').onclick = openSettings;
+$('#q').addEventListener('input', e => { query = e.target.value.trim(); document.querySelectorAll('.chip').forEach(c => { const p = state.products.find(x => x.id === c.dataset.id); c.classList.toggle('dim', !!query && !!p && !norm(p.name).includes(norm(query))); }); });
+$('#btn-clear-ex').onclick = () => { const prev = state.products.slice(); state.products = state.products.filter(p => !p.example); commit(); toast('Exemplos removidos.', 'Desfazer', () => { state.products = prev; commit(); }); };
+
+/* Biblioteca de arrastar: tenta três CDNs, nessa ordem */
+(function loadSortable(urls){
+  if (window.Sortable || !urls.length) return;
+  const s = document.createElement('script'); s.src = urls[0];
+  s.onload = () => bindSortables(); s.onerror = () => { s.remove(); loadSortable(urls.slice(1)); };
+  document.head.append(s);
+})(['sortable.min.js', 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js', 'https://unpkg.com/sortablejs@1.15.2/Sortable.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js']);
+
+render();
+boot();
+setInterval(pull, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+setInterval(() => { renderSoon(); renderStats(); }, 60 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
